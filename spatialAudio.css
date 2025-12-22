@@ -1,0 +1,6 @@
+#spatial-audio-toggle.active {
+    background-color: #bf00ff; /* Neonová fialová pro odlišení */
+    color: #ffffff;            /* Bílý text pro lepší čitelnost */
+    box-shadow: 0 0 15px #bf00ff; /* Fialová záře */
+    border-color: #bf00ff;     /* Obarví i rámeček */
+}

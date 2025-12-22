@@ -1142,6 +1142,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     populatePlaylist(currentPlaylist);
     updateVolumeDisplayAndIcon();
     updateButtonActiveStates(false);
+    
+    // ============================================
+    // 🛠️ BEZPEČNOSTNÍ POJISTKA (Fix pro zmenšení playlistu)
+    // ============================================
+    if (currentTrackIndex >= currentPlaylist.length) {
+        window.DebugManager?.log('main', `⚠️ Oprava indexu: ${currentTrackIndex} -> 0 (Playlist se zmenšil)`);
+        currentTrackIndex = 0;
+    }
+    // ============================================
+
     if (currentPlaylist.length > 0 && DOM.audioPlayer && DOM.audioSource && DOM.trackTitle) {
         DOM.audioSource.src = currentPlaylist[currentTrackIndex].src;
         DOM.trackTitle.textContent = currentPlaylist[currentTrackIndex].title;

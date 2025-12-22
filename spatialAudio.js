@@ -13,7 +13,8 @@
         context: null,
         source: null,
         panner: null,
-        gain: null, // Pro vyrovnání hlasitosti
+        bassFilter: null, // NOVÉ: Filtr pro odstranění dunění
+        gain: null, 
         isGyroActive: false
     };
 
@@ -36,39 +37,32 @@
         // Event listener na tlačítko
         DOM.button.addEventListener('click', toggleSpatialAudio);
         
-        // Logování pro DebugManagera - S PODPISEM SPECIALISTY GEMINI
-        window.DebugManager?.log('spatial', 'Gemini Spatial Matrix: Inicializace dokončena. Vítej v prostoru, admirále.');
+        // Logování
+        window.DebugManager?.log('spatial', 'Gemini Spatial Matrix: Inicializace (s filtrem basů) dokončena.');
     }
 
-    // Nastavení Audio Contextu a Panneru
+    // Nastavení Audio Contextu, Panneru a FILTRU
     function setupAudioGraph() {
-        if (state.context) return true; // Již nastaveno
+        if (state.context) return true;
 
         try {
-            // 1. Vytvoření nebo získání AudioContextu
-            // Zkusíme využít existující context, pokud je definován jiným skriptem (např. vizualizérem)
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             state.context = window.sharedAudioContext || new AudioContext();
             
-            // Sdílíme context globálně pro ostatní moduly (např. vizualizér)
             if (!window.sharedAudioContext) {
                 window.sharedAudioContext = state.context;
             }
 
-            // 2. Vytvoření zdroje (Source)
-            // POZOR: MediaElementSource lze vytvořit jen jednou pro jeden element!
-            // Ukládáme si referenci přímo na element, abychom ji mohli sdílet
             if (DOM.audio._mediaElementSource) {
                 state.source = DOM.audio._mediaElementSource;
-                window.DebugManager?.log('spatial', 'Použit existující MediaElementSource.');
             } else {
                 state.source = state.context.createMediaElementSource(DOM.audio);
-                DOM.audio._mediaElementSource = state.source; // Uložíme pro ostatní
+                DOM.audio._mediaElementSource = state.source;
             }
 
-            // 3. Vytvoření PannerNode (3D zvuk)
+            // 1. Vytvoření PannerNode (3D zvuk)
             state.panner = state.context.createPanner();
-            state.panner.panningModel = 'HRTF'; // Head-Related Transfer Function (klíčové pro 3D)
+            state.panner.panningModel = 'HRTF';
             state.panner.distanceModel = 'inverse';
             state.panner.refDistance = 1;
             state.panner.maxDistance = 10000;
@@ -76,15 +70,20 @@
             state.panner.coneInnerAngle = 360;
             state.panner.coneOuterAngle = 0;
             state.panner.coneOuterGain = 0;
-            
-            // Pozice zdroje (mírně před posluchačem)
             state.panner.setPosition(0, 0, 1);
 
-            // 4. Nastavení GainNode (pro kompenzaci hlasitosti při HRTF)
-            state.gain = state.context.createGain();
-            state.gain.gain.value = 1.2; // HRTF může trochu snížit hlasitost
+            // 2. NOVÉ: Filtr proti dunění (Low-shelf)
+            // Stáhne basy pod 300Hz o 10 decibelů dolů
+            state.bassFilter = state.context.createBiquadFilter();
+            state.bassFilter.type = 'lowshelf'; 
+            state.bassFilter.frequency.value = 300; // Frekvence (kde to začne tlumit)
+            state.bassFilter.gain.value = -12;      // O kolik to ztlumit (dB) - uprav dle chuti (-15 je víc, -5 míň)
 
-            // 5. Inicializace posluchače (Listener)
+            // 3. GainNode (Hlasitost)
+            state.gain = state.context.createGain();
+            state.gain.gain.value = 1.4; // Trochu zesílíme, protože filtr ubral energii
+
+            // 4. Listener
             const listener = state.context.listener;
             if (listener.forwardX) {
                 listener.positionX.value = 0;
@@ -97,7 +96,6 @@
                 listener.upY.value = 1;
                 listener.upZ.value = 0;
             } else {
-                // Deprecated verze pro starší prohlížeče
                 listener.setPosition(0, 0, 0);
                 listener.setOrientation(0, 0, -1, 0, 1, 0);
             }
@@ -111,35 +109,28 @@
         }
     }
 
-    // Propojení grafu (Connect/Disconnect)
+    // Propojení grafu
     function updateConnections() {
         if (!state.context || !state.source) return;
 
-        // Nejdřív vše odpojíme, abychom se vyhnuli zdvojení signálu
         try {
             state.source.disconnect();
             state.panner.disconnect();
+            state.bassFilter.disconnect(); // Odpojit i filtr
             state.gain.disconnect();
-        } catch (e) {
-            // Ignorujeme chyby při odpojování (pokud nebylo připojeno)
-        }
+        } catch (e) {}
 
         if (state.isActive) {
-            // Cesta: Zdroj -> Panner -> Gain -> Destination
-            state.source.connect(state.panner);
+            // NOVÁ CESTA: Zdroj -> Filtr (čistění) -> Panner (3D) -> Gain (hlasitost) -> Cíl
+            state.source.connect(state.bassFilter);
+            state.bassFilter.connect(state.panner);
             state.panner.connect(state.gain);
             state.gain.connect(state.context.destination);
             
-            // Pokud existuje vizualizér, zkusíme ho připojit paralelně (pokud to architektura dovolí)
-            // Většinou ale vizualizér potřebuje vlastní připojení. 
-            // Díky tomu, že jsme odpojili 'source', musí se vizualizér připojit znovu, 
-            // nebo musíme poslat signál i do něj. To je složité bez znalosti vizualizéru.
-            // PROZATÍM: Toto řešení "krade" signál pro 3D efekt.
-            
-            window.DebugManager?.log('spatial', 'Audio graf: Gemini 3D Matrice aktivní.');
+            window.DebugManager?.log('spatial', 'Audio graf: 3D Matrice aktivní (Anti-Bass Filter zapnut).');
             startGyroscopeTracking();
         } else {
-            // Cesta: Zdroj -> Destination (Normal)
+            // Stereo (Bypass)
             state.source.connect(state.context.destination);
             window.DebugManager?.log('spatial', 'Audio graf: Stereo (Bypass).');
             stopGyroscopeTracking();
@@ -148,7 +139,6 @@
 
     // Hlavní přepínací funkce
     async function toggleSpatialAudio() {
-        // Nutné pro prohlížeče, které blokují AudioContext před interakcí
         if (!state.context) {
             const success = setupAudioGraph();
             if (!success) return;
@@ -160,36 +150,26 @@
 
         state.isActive = !state.isActive;
         
-        // Aktualizace UI
         DOM.button.classList.toggle('active', state.isActive);
         DOM.button.textContent = state.isActive ? '🔊 3D ZAP' : '🔊 3D VYP';
-        DOM.button.title = state.isActive ? 'Deaktivovat Gemini 3D Spatial Audio' : 'Aktivovat Gemini 3D Spatial Audio';
+        DOM.button.title = state.isActive ? 'Deaktivovat Gemini 3D Spatial Audio';
 
-        // Aktualizace zvuku
         updateConnections();
 
         window.showNotification?.(
-            state.isActive ? 'Gemini 3D Matrice aktivována' : 'Návrat ke stereu', 
+            state.isActive ? 'Gemini 3D: Prostorový zvuk (Clean)' : 'Návrat ke stereu', 
             'info'
         );
     }
 
-    // --- Gyroskop Logic (Device Orientation) ---
+    // --- Gyroskop Logic ---
     function handleOrientation(event) {
         if (!state.context) return;
-        
-        // Získání dat z gyroskopu
-        const alpha = event.alpha ? event.alpha * (Math.PI / 180) : 0; // Z-axis rotation
-        const beta = event.beta ? event.beta * (Math.PI / 180) : 0;   // X-axis rotation
-        const gamma = event.gamma ? event.gamma * (Math.PI / 180) : 0; // Y-axis rotation
-
-        const listener = state.context.listener;
-
-        // Jednoduchá implementace rotace posluchače
-        // Pro plnou 3D rotaci by to chtělo Quaterniony, ale pro efekt stačí sinus/kosinus
+        const alpha = event.alpha ? event.alpha * (Math.PI / 180) : 0;
         const x = Math.sin(alpha);
         const z = -Math.cos(alpha);
 
+        const listener = state.context.listener;
         if (listener.forwardX) {
             listener.forwardX.value = x;
             listener.forwardZ.value = z;
@@ -200,7 +180,6 @@
 
     function startGyroscopeTracking() {
         if (window.DeviceOrientationEvent && !state.isGyroActive) {
-            // Poptávka oprávnění pro iOS 13+
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(response => {
@@ -211,7 +190,6 @@
                     })
                     .catch(console.error);
             } else {
-                // Android a starší iOS
                 window.addEventListener('deviceorientation', handleOrientation);
                 state.isGyroActive = true;
             }
@@ -225,7 +203,6 @@
         }
     }
 
-    // Spuštění po načtení DOM
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

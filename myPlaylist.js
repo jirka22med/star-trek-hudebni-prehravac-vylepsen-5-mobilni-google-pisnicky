@@ -12,7 +12,8 @@ window.tracks = [
     
     //google disk písničky
   { src: 'https://drive.google.com/uc?export=download&id=1vdNRFazQrF_KVfZSOfRHFp25LFjx2skk', title: 'hvezdne-plameny-nova-verze-v.4-top.1' },  
-    
+  { src: 'https://drive.google.com/uc?export=download&id=1vdNRFazQrF_KVfZSOfRHFp25LFjx2skk', title: 'hvezdne-plameny-nova-verze-v.4-top.2' },  
+    { src: 'https://drive.google.com/uc?export=download&id=1vdNRFazQrF_KVfZSOfRHFp25LFjx2skk', title: 'hvezdne-plameny-nova-verze-v.4-top.3' },
      
     
 ];   
@@ -20,6 +21,7 @@ window.tracks = [
 // Logování přes DebugManager
 window.DebugManager?.log('playlist', `🖖 myPlaylist.js načten: ${window.tracks.length} skladeb (verze: ${window.PLAYLIST_VERSION})`);
  
+
 
 
 

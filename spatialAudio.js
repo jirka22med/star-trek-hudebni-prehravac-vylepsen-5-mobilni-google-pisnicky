@@ -152,7 +152,8 @@
         
         DOM.button.classList.toggle('active', state.isActive);
         DOM.button.textContent = state.isActive ? '🔊 3D ZAP' : '🔊 3D VYP';
-        DOM.button.title = state.isActive ? 'Deaktivovat Gemini 3D Spatial Audio';
+        // OPRAVENÝ ŘÁDEK ZDE:
+        DOM.button.title = state.isActive ? 'Deaktivovat Gemini 3D Spatial Audio' : 'Aktivovat Gemini 3D Spatial Audio';
 
         updateConnections();
 
@@ -210,3 +211,4 @@
     }
 
 })();
+

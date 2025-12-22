@@ -7,13 +7,13 @@ const DEBUG_COLOUDE_FIRESTORE = false; // Globální přepínač pro logování:
 
 // !!! Zde je tvůj konfigurační objekt, který jsi mi poslal !!!
 const firebaseConfig = {
-    apiKey: "AIzaSyCxO2BdPLkvRW9q3tZTW5J39pjjAoR-9Sk", // Tvoje API Key
-    authDomain: "audio-prehravac-v-3.firebaseapp.com", // Tvoje Auth Domain
-    projectId: "audio-prehravac-v-3", // Tvoje Project ID
-    storageBucket: "audio-prehravac-v-3.firebasestorage.app", // Tvoje Storage Bucket
-    messagingSenderId: "343140348126", // Tvoje Messaging Sender ID
-    appId: "1:343140348126:web:c61dc969efb6dcb547524f" // Tvoje App ID
-    //measurementId: "G-6QSYEY22N6" // Pokud nepoužíváš Analytics, může být zakomentováno
+  apiKey: "AIzaSyBFli5neiNRxrL83b0yfbLT3IcpEktQaxk",
+  authDomain: "star-trek-player-v5.firebaseapp.com",
+  projectId: "star-trek-player-v5",
+  storageBucket: "star-trek-player-v5.firebasestorage.app",
+  messagingSenderId: "971501834672",
+  appId: "1:971501834672:web:41fda3b2ef89d8aa838675",
+ // measurementId: "G-XXSF883MGW"
 };
 
 // Log pro potvrzení, že firebaseConfig byl načten
@@ -1080,5 +1080,6 @@ window.ButtonVisibilityFirebaseManager = {
  
 
  
+
 
 })(); // KONEC IIFE - Vše je izolované
